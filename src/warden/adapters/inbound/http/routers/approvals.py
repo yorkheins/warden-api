@@ -10,6 +10,7 @@ from warden.adapters.inbound.http.schemas.approval_schemas import (
 )
 from warden.domain.services.approval_service import ApprovalService
 from warden.infrastructure.container import get_approval_repo, get_approval_service
+from warden.infrastructure.exceptions import ApprovalNotFoundError
 
 router = APIRouter()
 
@@ -19,6 +20,12 @@ async def list_approvals(approval_repo=Depends(get_approval_repo)):
     approvals = await approval_repo.find_pending()
     return [ApprovalListItem.from_domain(a) for a in approvals]
 
+@router.get("/{approval_id}", response_model=ApprovalListItem)
+async def get_approval(approval_id: UUID, approval_repo=Depends(get_approval_repo)):
+    approval = await approval_repo.find_by_id(approval_id)
+    if not approval:
+        raise ApprovalNotFoundError(f"Approval {approval_id} not found")
+    return ApprovalListItem.from_domain(approval)
 
 @router.post("/{approval_id}/approve", response_model=ApprovalActionResponse)
 async def approve(

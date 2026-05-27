@@ -29,6 +29,12 @@ class SQLiteApprovalRepository(ApprovalRepository):
         )
         return [self._to_domain(row) for row in result.scalars()]
 
+    async def find_all(self) -> list[ApprovalRequest]:
+        result = await self._session.execute(
+            select(ApprovalRequestORM).order_by(ApprovalRequestORM.created_at.desc())
+        )
+        return [self._to_domain(row) for row in result.scalars()]
+
     async def update(self, approval: ApprovalRequest) -> ApprovalRequest:
         row = await self._session.get(ApprovalRequestORM, str(approval.id))
         if row:
