@@ -1,12 +1,3 @@
-"""
-Cubre rutas y ramas no alcanzadas por los tests existentes:
-- GET /events (lista)
-- POST /events/webhook/stream (SSE)
-- GET /events/{id} evento inexistente → 404
-- POST /approvals/{id}/approve|reject con ID inexistente → 404
-- POST /approvals/{id}/approve ya resuelto → 409
-- create_app() de main.py con lifespan completo
-"""
 import uuid
 
 import pytest
@@ -24,7 +15,7 @@ _BASE_PAYLOAD = {
 }
 
 
-# ─── GET /events ───────────────────────────────────────────────────────────────
+#GET /events 
 
 async def test_list_events_empty(client):
     resp = await client.get("/events")
@@ -39,14 +30,14 @@ async def test_list_events_after_ingestion(client):
     assert len(resp.json()) == 1
 
 
-# ─── GET /events/{id} → 404 ────────────────────────────────────────────────────
+#GET /events/{id} → 404 
 
 async def test_get_event_not_found(client):
     resp = await client.get(f"/events/{uuid.uuid4()}")
     assert resp.status_code == 404
 
 
-# ─── POST /events/webhook/stream ───────────────────────────────────────────────
+#POST /events/webhook/stream 
 
 async def test_stream_returns_sse_events(client):
     resp = await client.post(
@@ -72,7 +63,7 @@ async def test_stream_duplicate_returns_error_step(client):
     assert error["code"] == "duplicate"
 
 
-# ─── Approval not found ────────────────────────────────────────────────────────
+#Approval not found
 
 async def test_approve_nonexistent_returns_404(client):
     resp = await client.post(
@@ -90,7 +81,7 @@ async def test_reject_nonexistent_returns_404(client):
     assert resp.status_code == 404
 
 
-# ─── GET /health ───────────────────────────────────────────────────────────────
+#GET /health
 
 async def test_health_returns_ok(client):
     resp = await client.get("/health")
@@ -98,7 +89,7 @@ async def test_health_returns_ok(client):
     assert resp.json()["status"] == "ok"
 
 
-# ─── create_app() con lifespan ─────────────────────────────────────────────────
+#create_app
 
 @pytest_asyncio.fixture
 async def main_client(tmp_path, monkeypatch):
