@@ -54,7 +54,7 @@ def ts(offset_minutes: int) -> str:
 # ── Helpers HTTP ──────────────────────────────────────────────────────────────
 
 async def send_event(client: httpx.AsyncClient, payload: dict) -> str | None:
-    resp = await client.post("/events/webhook", json=payload)
+    resp = await client.post("/events/webhook/stream", json=payload)
     if resp.status_code == 202:
         return resp.json().get("event_id")
     if resp.status_code == 409:
