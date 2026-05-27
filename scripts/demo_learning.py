@@ -70,9 +70,9 @@ def fail(t: str)      -> None: print(f"  {R}x{RST} {t}")
 
 
 _STEP_ICON = {
-    "event_received":    "[IN ]",
-    "reasoning_started": "[AI ]",
-    "decision_made":     "[OK ]",
+    "event_received":    "[IN]",
+    "reasoning_started": "[AI]",
+    "decision_made":     "[OK]",
     "executing":         "[RUN]",
     "approval_required": "[APR]",
     "approval_created":  "[APR]",
