@@ -43,6 +43,7 @@ services:
       ORCHESTRATOR_MOCK_URL: "http://mock-orchestrator:8001"
       NOTIFIER_MOCK_URL: "http://mock-notifier:8002"
       PRODUCTION_ENVIRONMENTS: '["prod"]'
+      WORKLOAD_HISTORY_LIMIT: "5"
       DATABASE_URL: "sqlite+aiosqlite:////data/warden.db"
     volumes:
       - warden-data:/data

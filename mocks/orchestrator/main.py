@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Mock Orchestrator")
 
-ERROR_RATE = float(os.getenv("MOCK_ERROR_RATE", "0.1"))
+ERROR_RATE  = float(os.getenv("MOCK_ERROR_RATE", "0.0"))
 LATENCY_MIN = int(os.getenv("MOCK_LATENCY_MS_MIN", "100"))
 LATENCY_MAX = int(os.getenv("MOCK_LATENCY_MS_MAX", "500"))
 
