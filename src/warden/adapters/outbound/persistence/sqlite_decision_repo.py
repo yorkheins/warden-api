@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from warden.adapters.outbound.persistence.models import DecisionORM
@@ -16,6 +16,14 @@ class SQLiteDecisionRepository(DecisionRepository):
         self._session.add(self._to_orm(decision))
         await self._session.flush()
         return decision
+
+    async def update_execution_status(self, decision_id: UUID, status: ExecutionStatus) -> None:
+        await self._session.execute(
+            update(DecisionORM)
+            .where(DecisionORM.id == str(decision_id))
+            .values(execution_status=status.value)
+        )
+        await self._session.flush()
 
     async def find_by_event_id(self, event_id: UUID) -> Decision | None:
         result = await self._session.execute(

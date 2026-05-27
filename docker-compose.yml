@@ -1,0 +1,56 @@
+services:
+  mock-orchestrator:
+    build:
+      context: ./mocks/orchestrator
+    ports:
+      - "8001:8001"
+    environment:
+      MOCK_ERROR_RATE: "0.0"
+      MOCK_LATENCY_MS_MIN: "100"
+      MOCK_LATENCY_MS_MAX: "500"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 60s
+      start_period: 10s
+      start_interval: 5s
+      timeout: 5s
+      retries: 3
+
+  mock-notifier:
+    build:
+      context: ./mocks/notifier
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 60s
+      start_period: 10s
+      start_interval: 5s
+      timeout: 5s
+      retries: 3
+
+  warden:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: "production"
+      LOG_LEVEL: "INFO"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      LLM_MODEL: "gpt-4o-mini"
+      USE_MOCK_LLM: "${USE_MOCK_LLM:-false}"
+      ORCHESTRATOR_MOCK_URL: "http://mock-orchestrator:8001"
+      NOTIFIER_MOCK_URL: "http://mock-notifier:8002"
+      PRODUCTION_ENVIRONMENTS: '["prod"]'
+      DATABASE_URL: "sqlite+aiosqlite:////data/warden.db"
+    volumes:
+      - warden-data:/data
+    depends_on:
+      mock-orchestrator:
+        condition: service_healthy
+      mock-notifier:
+        condition: service_healthy
+
+volumes:
+  warden-data:

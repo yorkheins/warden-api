@@ -5,6 +5,7 @@ import structlog
 
 from warden.domain.models.approval import ApprovalRequest, ApprovalStatus
 from warden.domain.models.action_result import ActionResult
+from warden.domain.models.decision import ExecutionStatus
 from warden.domain.models.workload_history import OutcomeStatus
 from warden.domain.ports.approval_repository import ApprovalRepository
 from warden.domain.ports.decision_repository import DecisionRepository
@@ -38,6 +39,8 @@ class ApprovalService:
 
         result = await self._executor.execute(event, decision)
         outcome = OutcomeStatus.APPROVED_BY_HUMAN if result.success else OutcomeStatus.FAILED
+        new_status = ExecutionStatus.EXECUTED if result.success else ExecutionStatus.FAILED
+        await self._decision_repo.update_execution_status(decision.id, new_status)
 
         approval.status = ApprovalStatus.APPROVED
         approval.human_comment = comment
