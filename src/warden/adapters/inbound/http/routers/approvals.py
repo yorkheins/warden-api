@@ -3,7 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from warden.adapters.inbound.http.schemas.approval_schemas import (
-    ApprovalActionRequest,
+    ApprovalApproveRequest,
+    ApprovalRejectRequest,
     ApprovalActionResponse,
     ApprovalListItem,
 )
@@ -22,7 +23,7 @@ async def list_approvals(approval_repo=Depends(get_approval_repo)):
 @router.post("/{approval_id}/approve", response_model=ApprovalActionResponse)
 async def approve(
     approval_id: UUID,
-    body: ApprovalActionRequest,
+    body: ApprovalApproveRequest,
     approval_service: ApprovalService = Depends(get_approval_service),
 ):
     result = await approval_service.approve(approval_id, body.resolved_by, body.comment)
@@ -37,10 +38,13 @@ async def approve(
 @router.post("/{approval_id}/reject", response_model=ApprovalActionResponse)
 async def reject(
     approval_id: UUID,
-    body: ApprovalActionRequest,
+    body: ApprovalRejectRequest,
     approval_service: ApprovalService = Depends(get_approval_service),
 ):
-    await approval_service.reject(approval_id, body.resolved_by, body.comment)
+    await approval_service.reject(
+        approval_id, body.resolved_by, body.comment,
+        body.feedback_reason, body.alternative_action,
+    )
     return ApprovalActionResponse(
         approval_id=approval_id,
         status="rejected",

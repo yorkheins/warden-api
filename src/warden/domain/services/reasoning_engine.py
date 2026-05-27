@@ -19,7 +19,26 @@ _FALLBACK = LLMRawDecision(
     safe_to_auto=False,
 )
 
+_INJECTION_FALLBACK = LLMRawDecision(
+    action=Action.NOTIFY_HUMAN,
+    confidence=0.0,
+    reasoning="Suspicious input detected in event payload. Escalating to human.",
+    safe_to_auto=False,
+)
+
+_INJECTION_PATTERNS = [
+    "ignore previous",
+    "ignore instructions",
+    "override",
+    "disable approval",
+    "bypass",
+    "execute immediately",
+    "skip approval",
+    "forget instructions",
+]
+
 _PROD_RESTRICTED_ACTIONS = {Action.ROLLBACK, Action.SCALE_UP}
+_HIGH_INCIDENT_THRESHOLD = 3
 
 
 class ReasoningEngineService:
@@ -46,8 +65,17 @@ class ReasoningEngineService:
             history_entries_count=len(history),
             correlation_id=str(event.correlation_id),
         )
-        raw = await self._reason_with_fallback(event, history)
-        return self._apply_restrictions(event, raw)
+        if self._detect_prompt_injection(event):
+            log.warning(
+                "prompt_injection_detected",
+                event_id=str(event.id),
+                signal=event.signal,
+                correlation_id=str(event.correlation_id),
+            )
+            raw = _INJECTION_FALLBACK
+        else:
+            raw = await self._reason_with_fallback(event, history)
+        return self._apply_restrictions(event, raw, history)
 
     async def _reason_with_fallback(self, event: Event, history: list) -> LLMRawDecision:
         try:
@@ -70,7 +98,15 @@ class ReasoningEngineService:
             )
             return _FALLBACK
 
-    def _apply_restrictions(self, event: Event, raw: LLMRawDecision) -> Decision:
+    def _detect_prompt_injection(self, event: Event) -> bool:
+        text = event.signal.lower()
+        for value in event.context.values():
+            if isinstance(value, str):
+                text += " " + value.lower()
+        return any(pattern in text for pattern in _INJECTION_PATTERNS)
+
+    def _apply_restrictions(self, event: Event, raw: LLMRawDecision, history: list | None = None) -> Decision:
+        history = history or []
         safe_to_auto = raw.safe_to_auto
         restrictions: list[str] = []
 
@@ -108,6 +144,19 @@ class ReasoningEngineService:
                 "restriction_applied",
                 event_id=str(event.id),
                 restriction="R3",
+                original_safe_to_auto=raw.safe_to_auto,
+                final_safe_to_auto=False,
+                correlation_id=str(event.correlation_id),
+            )
+
+        if len(history) >= _HIGH_INCIDENT_THRESHOLD:
+            safe_to_auto = False
+            restrictions.append(f"R4:high_incident_frequency({len(history)})")
+            log.info(
+                "restriction_applied",
+                event_id=str(event.id),
+                restriction="R4",
+                incident_count=len(history),
                 original_safe_to_auto=raw.safe_to_auto,
                 final_safe_to_auto=False,
                 correlation_id=str(event.correlation_id),

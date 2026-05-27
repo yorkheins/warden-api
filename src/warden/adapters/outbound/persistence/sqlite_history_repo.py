@@ -33,7 +33,12 @@ class SQLiteHistoryRepository(HistoryRepository):
         return [self._to_domain(row) for row in result.scalars()]
 
     async def update_outcome(
-        self, event_id: UUID, outcome: OutcomeStatus, human_feedback: str | None
+        self,
+        event_id: UUID,
+        outcome: OutcomeStatus,
+        human_feedback: str | None,
+        feedback_reason: str | None = None,
+        alternative_action: str | None = None,
     ) -> None:
         result = await self._session.execute(
             select(WorkloadHistoryORM).where(
@@ -44,6 +49,8 @@ class SQLiteHistoryRepository(HistoryRepository):
         if row:
             row.outcome = outcome.value
             row.human_feedback = human_feedback
+            row.feedback_reason = feedback_reason
+            row.alternative_action = alternative_action
             await self._session.flush()
 
     def _to_orm(self, entry: WorkloadHistoryEntry) -> WorkloadHistoryORM:
@@ -57,6 +64,8 @@ class SQLiteHistoryRepository(HistoryRepository):
             was_auto=entry.was_auto,
             outcome=entry.outcome.value,
             human_feedback=entry.human_feedback,
+            feedback_reason=entry.feedback_reason,
+            alternative_action=entry.alternative_action,
             created_at=entry.created_at,
         )
 
@@ -71,5 +80,7 @@ class SQLiteHistoryRepository(HistoryRepository):
             was_auto=row.was_auto,
             outcome=OutcomeStatus(row.outcome),
             human_feedback=row.human_feedback,
+            feedback_reason=row.feedback_reason,
+            alternative_action=row.alternative_action,
             created_at=row.created_at,
         )

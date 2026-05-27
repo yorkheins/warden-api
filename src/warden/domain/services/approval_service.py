@@ -33,7 +33,10 @@ class ApprovalService:
         self._decision_repo = decision_repo
 
     async def approve(
-        self, approval_id: UUID, resolved_by: str | None, comment: str | None
+        self,
+        approval_id: UUID,
+        resolved_by: str | None,
+        comment: str | None,
     ) -> ActionResult:
         approval, event, decision = await self._load_and_validate(approval_id)
 
@@ -59,7 +62,12 @@ class ApprovalService:
         return result
 
     async def reject(
-        self, approval_id: UUID, resolved_by: str | None, comment: str | None
+        self,
+        approval_id: UUID,
+        resolved_by: str | None,
+        comment: str | None,
+        feedback_reason: str | None = None,
+        alternative_action: str | None = None,
     ) -> None:
         approval, event, _ = await self._load_and_validate(approval_id)
 
@@ -69,7 +77,8 @@ class ApprovalService:
         approval.resolved_at = datetime.now(timezone.utc)
         await self._approval_repo.update(approval)
         await self._history_repo.update_outcome(
-            event.id, OutcomeStatus.REJECTED_BY_HUMAN, comment or "rejected"
+            event.id, OutcomeStatus.REJECTED_BY_HUMAN, comment or "rejected",
+            feedback_reason, alternative_action,
         )
 
         log.info(

@@ -15,5 +15,10 @@ class HistoryRepository(ABC):
 
     @abstractmethod
     async def update_outcome(
-        self, event_id: UUID, outcome: OutcomeStatus, human_feedback: str | None
+        self,
+        event_id: UUID,
+        outcome: OutcomeStatus,
+        human_feedback: str | None,
+        feedback_reason: str | None = None,
+        alternative_action: str | None = None,
     ) -> None: ...

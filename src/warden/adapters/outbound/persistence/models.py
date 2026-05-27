@@ -62,6 +62,8 @@ class WorkloadHistoryORM(Base):
     was_auto: Mapped[bool] = mapped_column(Boolean, nullable=False)
     outcome: Mapped[str] = mapped_column(String, nullable=False)
     human_feedback: Mapped[str | None] = mapped_column(String, nullable=True)
+    feedback_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    alternative_action: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (

@@ -28,9 +28,16 @@ class ApprovalListItem(BaseModel):
         )
 
 
-class ApprovalActionRequest(BaseModel):
+class ApprovalApproveRequest(BaseModel):
     comment: str | None = None
     resolved_by: str | None = None
+
+
+class ApprovalRejectRequest(BaseModel):
+    comment: str | None = None
+    resolved_by: str | None = None
+    feedback_reason: str | None = None
+    alternative_action: str | None = None
 
 
 class ApprovalActionResponse(BaseModel):

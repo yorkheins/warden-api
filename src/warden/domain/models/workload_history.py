@@ -26,3 +26,5 @@ class WorkloadHistoryEntry:
     outcome: OutcomeStatus
     human_feedback: str | None
     created_at: datetime
+    feedback_reason: str | None = None
+    alternative_action: str | None = None

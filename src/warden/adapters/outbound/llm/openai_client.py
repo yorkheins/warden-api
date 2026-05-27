@@ -63,6 +63,9 @@ class OpenAIClient(LLMClient):
         except ValidationError as e:
             raise LLMResponseMalformedError(f"LLM response schema mismatch: {e}") from e
 
+        if not parsed.reasoning or len(parsed.reasoning.strip()) < 10:
+            raise LLMResponseMalformedError("LLM returned empty or insufficient reasoning")
+
         return LLMRawDecision(
             action=parsed.action,
             confidence=parsed.confidence,
