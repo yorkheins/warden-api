@@ -193,3 +193,42 @@ Los tests usan SQLite in-memory y `MockLLMClient` — no requieren servicios ext
 - **Feedback loop**: el historial de decisiones y el feedback humano (approve/reject con comentario) se incluyen como contexto en cada llamada al LLM para el mismo workload.
 - **CQRS para historial**: `workload_history` es un modelo de lectura desnormalizado. Evita JOINs al consultar contexto para el LLM.
 - **Fallback LLM**: ante cualquier error del LLM, la decisión es `notify_human` con `confidence=0.0` y `safe_to_auto=false`. El sistema nunca se queda sin respuesta.
+
+---
+
+## Acciones de mejora
+
+Esta entrega asume **red interna de confianza** (típico de un MVP de prueba técnica). Para un despliegue en producción, las mejoras prioritarias serían:
+
+### Seguridad y acceso
+
+| Prioridad | Mejora | Motivo |
+|---|---|---|
+| Alta | Autenticación y autorización en toda la API (API key, JWT o mTLS) | Hoy cualquier cliente puede ingestar eventos, listar datos y aprobar acciones que ejecutan rollback/restart/scale en el orquestador |
+| Alta | Firma HMAC del webhook (`X-Signature` + timestamp, ventana anti-replay) | Sin integridad del payload, un actor en la red puede inyectar eventos falsos |
+| Alta | Validar `environment_id` contra el IDP (no confiar solo en el body) | Un emisor malicioso puede enviar `staging` para un workload en `prod` y eludir R3 |
+| Media | Roles separados: emisor de webhooks, operador de approvals, solo lectura | Principio de mínimo privilegio en un servicio con impacto en infraestructura |
+| Media | Desactivar `/docs` y `/openapi.json` cuando `APP_ENV=production` | Reduce superficie de exposición del contrato interno |
+| Baja | No exponer mocks (`8001`, `8002`) fuera de desarrollo; quitar `GET /notify/received` en prod | El mock de notifier acumula payloads con datos operativos sin auth |
+
+### Abuso, datos y LLM
+
+| Prioridad | Mejora | Motivo |
+|---|---|---|
+| Media | Límite de tamaño en `context` y `max_length` en `project_id` / `signal` | Payloads enormes pueden saturar SQLite, inflar prompts y aumentar coste/latencia de OpenAI |
+| Media | Defensas frente a prompt injection en `context` (delimitación, esquema opcional, truncado) | El contenido del webhook se serializa tal cual al prompt del LLM; R1/R2/R3 limitan auto-ejecución pero no el abuso operativo |
+| Media | Errores genéricos en SSE (`/events/webhook/stream`); detalle solo en logs | Hoy `str(exception)` puede filtrar detalles internos al cliente |
+| Baja | Rate limiting en `POST /events/webhook` | Mitiga spam de eventos y coste de LLM |
+
+### Robustez operativa
+
+| Prioridad | Mejora | Motivo |
+|---|---|---|
+| Baja | Manejar condición de carrera en dedup (UNIQUE en `dedup_key` → 409, no 500) | Dos webhooks idénticos concurrentes pueden chocar en la restricción única |
+| Baja | Rotación y gestión de secretos (`OPENAI_API_KEY`) vía vault o variables del runtime | La key no debe versionarse; conviene política de rotación si hubo exposición |
+
+### Lo que ya está bien
+
+- **SQL injection**: consultas vía SQLAlchemy ORM con parámetros enlazados; no hay SQL dinámico concatenado.
+- **Validación HTTP**: Pydantic con `extra="forbid"`, enums y tipos estrictos en la respuesta del LLM.
+- **Restricciones de negocio**: R1/R2/R3 en código de dominio, no delegadas al prompt.
